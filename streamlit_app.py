@@ -1,34 +1,56 @@
 import streamlit as st
+import os
+from pytube import YouTube
 import whisper
 from googletrans import Translator
-from pytube import YouTube
 
-st.title("🎬 Otomatik Türkçe Altyazı Çevirici")
+st.set_page_config(page_title="🎬 Türkçe Altyazı Uygulaması")
 
-option = st.radio("Video kaynağını seç:", ["Dosya Yükle", "YouTube Linki"])
+st.title("🎧 Otomatik Türkçe Altyazı Çevirici")
 
-if option == "Dosya Yükle":
-    video = st.file_uploader("Video yükle", type=["mp4","mkv","avi"])
+st.write("Bu uygulama videonun sesini otomatik olarak çözümler, Türkçe'ye çevirir ve altyazı dosyası oluşturur.")
+
+# Seçim
+option = st.radio("Video kaynağını seç:", ["🎥 Bilgisayardan Yükle", "🔗 YouTube Linki"])
+
+video_path = None
+
+# 1️⃣ Dosya yükleme
+if option == "🎥 Bilgisayardan Yükle":
+    video = st.file_uploader("Video yükle (MP4, MKV, AVI)", type=["mp4", "mkv", "avi"])
     if video:
-        with open("video.mp4", "wb") as f:
+        with open("uploaded_video.mp4", "wb") as f:
             f.write(video.read())
-        video_path = "video.mp4"
-elif option == "YouTube Linki":
+        video_path = "uploaded_video.mp4"
+        st.success("✅ Video başarıyla yüklendi.")
+
+# 2️⃣ YouTube linki
+elif option == "🔗 YouTube Linki":
     url = st.text_input("YouTube linkini gir:")
     if st.button("Videoyu indir"):
-        yt = YouTube(url)
-        yt.streams.filter(only_audio=True).first().download(filename="video.mp4")
-        video_path = "video.mp4"
-        st.success("Video indirildi!")
+        if url:
+            yt = YouTube(url)
+            yt.streams.filter(only_audio=True).first().download(filename="youtube_video.mp4")
+            video_path = "youtube_video.mp4"
+            st.success("🎬 Video indirildi.")
+        else:
+            st.warning("Lütfen geçerli bir YouTube linki gir.")
 
-if st.button("Altyazıyı oluştur"):
-    st.info("İşleniyor...")
+# 3️⃣ Altyazı oluşturma
+if video_path and st.button("Altyazıyı oluştur"):
+    st.info("İşleniyor... Bu işlem birkaç dakika sürebilir ⏳")
+
+    # Ses tanıma
     model = whisper.load_model("small")
-    result = model.transcribe("video.mp4")
-    translator = Translator()
-    tr_text = translator.translate(result["text"], dest='tr').text
+    result = model.transcribe(video_path)
 
-    with open("translated.srt", "w", encoding="utf-8") as f:
+    # Türkçe çeviri
+    translator = Translator()
+    tr_text = translator.translate(result["text"], dest="tr").text
+
+    # SRT oluşturma
+    srt_path = "altyazi_tr.srt"
+    with open(srt_path, "w", encoding="utf-8") as f:
         f.write(tr_text)
-    st.success("✅ Türkçe altyazı hazır!")
-    st.download_button("Altyazıyı indir", tr_text, file_name="altyazi.srt")
+
+    st.success("✅ Türkçe altyazı başar
