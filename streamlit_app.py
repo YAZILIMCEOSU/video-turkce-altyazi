@@ -53,4 +53,7 @@ if video_path and st.button("Altyazıyı oluştur"):
     with open(srt_path, "w", encoding="utf-8") as f:
         f.write(tr_text)
 
-    st.success("✅ Türkçe altyazı başar
+    st.success("✅ Türkçe altyazı başarıyla oluşturuldu!")
+    with open(srt_path, "r", encoding="utf-8") as f:
+        st.download_button("📄 Altyazıyı indir", f, file_name="altyazi_tr.srt")
+
