@@ -1,10 +1,3 @@
-import imageio_ffmpeg
-import os
-
-# ffmpeg path'i al
-ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-os.environ["FFMPEG_BINARY"] = ffmpeg_path
-
 import streamlit as st
 import os
 import tempfile
@@ -13,8 +6,14 @@ import srt
 import datetime
 from deep_translator import GoogleTranslator
 import yt_dlp
-import imageio.v3 as iio  # ffmpeg için
+import imageio_ffmpeg  # ffmpeg için
 import time  # progress bar için
+
+# ------------------- ffmpeg ayarı -------------------
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+# PATH değişkenine ekle ki yt-dlp ve whisper bulabilsin
+os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
+st.write(f"✅ ffmpeg binary: {ffmpeg_path}")
 
 # ------------------- Başlık -------------------
 st.title("🎬 Türkçe Altyazı Oluşturucu")
@@ -72,7 +71,7 @@ if st.button("▶️ Başlat"):
             progress_text.text("🔄 Ses tanıma modeli yükleniyor...")
             model = whisper.load_model("base")
             progress_bar.progress(30)
-            time.sleep(0.5)  # görsel efekt için
+            time.sleep(0.5)
 
             # 50-70%: Ses çözümleme
             progress_text.text("🗣️ Ses çözümleniyor...")
