@@ -1,59 +1,64 @@
 import streamlit as st
 import os
+import tempfile
+import srt
+import moviepy.editor as mp
 from pytube import YouTube
 import whisper
-from googletrans import Translator
+from deep_translator import GoogleTranslator  # 🔹 Yeni eklendi, googletrans yerine
 
-st.set_page_config(page_title="🎬 Türkçe Altyazı Uygulaması")
+st.title("🎬 Türkçe Altyazı Çevirici Uygulaması")
 
-st.title("🎧 Otomatik Türkçe Altyazı Çevirici")
+st.markdown("""
+Bu uygulama, yüklediğiniz veya YouTube bağlantısı verdiğiniz videolardan **Türkçe altyazı** üretir.  
+Desteklenen diller: İngilizce, Almanca, Fransızca ve diğer diller.
+""")
 
-st.write("Bu uygulama videonun sesini otomatik olarak çözümler, Türkçe'ye çevirir ve altyazı dosyası oluşturur.")
+# Whisper modelini yükle
+@st.cache_resource
+def load_model():
+    return whisper.load_model("small")
 
-# Seçim
-option = st.radio("Video kaynağını seç:", ["🎥 Bilgisayardan Yükle", "🔗 YouTube Linki"])
+model = load_model()
+
+# Video seçimi
+option = st.radio("Video türünü seçin:", ["🎥 YouTube Linki", "📁 Bilgisayardan Yükle"])
 
 video_path = None
 
-# 1️⃣ Dosya yükleme
-if option == "🎥 Bilgisayardan Yükle":
-    video = st.file_uploader("Video yükle (MP4, MKV, AVI)", type=["mp4", "mkv", "avi"])
-    if video:
-        with open("uploaded_video.mp4", "wb") as f:
-            f.write(video.read())
-        video_path = "uploaded_video.mp4"
-        st.success("✅ Video başarıyla yüklendi.")
+if option == "🎥 YouTube Linki":
+    yt_link = st.text_input("YouTube bağlantısını buraya yapıştırın:")
+    if yt_link:
+        try:
+            yt = YouTube(yt_link)
+            stream = yt.streams.filter(only_audio=True).first()
+            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+            stream.download(filename=tmp_file.name)
+            video_path = tmp_file.name
+            st.success("✅ YouTube videosu indirildi!")
+        except Exception as e:
+            st.error(f"❌ Video indirilemedi: {e}")
 
-# 2️⃣ YouTube linki
-elif option == "🔗 YouTube Linki":
-    url = st.text_input("YouTube linkini gir:")
-    if st.button("Videoyu indir"):
-        if url:
-            yt = YouTube(url)
-            yt.streams.filter(only_audio=True).first().download(filename="youtube_video.mp4")
-            video_path = "youtube_video.mp4"
-            st.success("🎬 Video indirildi.")
-        else:
-            st.warning("Lütfen geçerli bir YouTube linki gir.")
+elif option == "📁 Bilgisayardan Yükle":
+    uploaded_file = st.file_uploader("Bir video dosyası yükleyin (MP4)", type=["mp4", "mkv", "mov"])
+    if uploaded_file:
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        tmp_file.write(uploaded_file.read())
+        video_path = tmp_file.name
+        st.success("✅ Video yüklendi!")
 
-# 3️⃣ Altyazı oluşturma
-if video_path and st.button("Altyazıyı oluştur"):
-    st.info("İşleniyor... Bu işlem birkaç dakika sürebilir ⏳")
+# Altyazı oluşturma
+if video_path and st.button("🎧 Altyazıyı oluştur"):
+    st.info("⏳ Ses dönüştürülüyor, lütfen bekleyin...")
+    try:
+        result = model.transcribe(video_path, task="translate")  # İngilizceye çevir
+        english_text = result["text"]
 
-    # Ses tanıma
-    model = whisper.load_model("small")
-    result = model.transcribe(video_path)
+        st.success("✅ Altyazı çıkarıldı. Türkçe'ye çevriliyor...")
 
-    # Türkçe çeviri
-    translator = Translator()
-    tr_text = translator.translate(result["text"], dest="tr").text
+        # 🔹 Deep Translator kullanımı (Googletrans yerine)
+        translated_text = GoogleTranslator(source='auto', target='tr').translate(english_text)
 
-    # SRT oluşturma
-    srt_path = "altyazi_tr.srt"
-    with open(srt_path, "w", encoding="utf-8") as f:
-        f.write(tr_text)
-
-    st.success("✅ Türkçe altyazı başarıyla oluşturuldu!")
-    with open(srt_path, "r", encoding="utf-8") as f:
-        st.download_button("📄 Altyazıyı indir", f, file_name="altyazi_tr.srt")
+        # Altyazı dosyasını oluştur
+        subs = [srt.Subtitle(index=i, start=srt.timedelta(seconds=i * 5),
 
