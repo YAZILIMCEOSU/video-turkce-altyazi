@@ -7,8 +7,7 @@ import datetime
 from pytube import YouTube
 from deep_translator import GoogleTranslator
 
-# ------------------- Streamlit Ayarları -------------------
-st.set_option('server.maxUploadSize', 1024)  # 🔹 1 GB'a kadar video yükleme
+# ------------------- Streamlit Başlık -------------------
 st.title("🎬 Türkçe Altyazı Oluşturucu (Otomatik Çeviri)")
 st.write("Videoyu yükle veya YouTube linki gir → otomatik Türkçe altyazı oluşturulsun.")
 
@@ -17,18 +16,20 @@ if not os.path.exists("temp"):
     os.makedirs("temp")
 
 # ------------------- Video Kaynak Seçimi -------------------
-option = st.radio("Video Kaynağı Seç:", ["📤 Video Yükle", "🌐 YouTube Linki"])
+option = st.radio("Video Kaynağı Seç:", ["📤 Video Yükle (≤200MB)", "🌐 YouTube Linki"])
 
 video_path = None
 
-if option == "📤 Video Yükle":
-    uploaded_file = st.file_uploader("Bir video yükle (MP4, MOV, AVI...)", type=["mp4", "mov", "avi", "mkv"])
+# --- Dosya Yükleme (küçük videolar için) ---
+if option == "📤 Video Yükle (≤200MB)":
+    uploaded_file = st.file_uploader("Bir video yükle (MP4, MOV, AVI, MKV)", type=["mp4", "mov", "avi", "mkv"])
     if uploaded_file:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
             tmp_file.write(uploaded_file.read())
             video_path = tmp_file.name
             st.success("✅ Video başarıyla yüklendi.")
 
+# --- YouTube Video İndirme ---
 elif option == "🌐 YouTube Linki":
     yt_link = st.text_input("YouTube video linkini gir:")
     if yt_link:
@@ -41,7 +42,7 @@ elif option == "🌐 YouTube Linki":
         except Exception as e:
             st.error(f"🚨 YouTube indirme hatası: {e}")
 
-# ------------------- Altyazı İşleme -------------------
+# ------------------- Altyazı Oluşturma -------------------
 if video_path and st.button("🎧 Altyazıyı Oluştur"):
     try:
         st.info("🔄 Ses tanıma modeli yükleniyor...")
@@ -49,7 +50,6 @@ if video_path and st.button("🎧 Altyazıyı Oluştur"):
 
         st.info("🗣️ Ses çözümleniyor, lütfen bekleyin...")
         result = model.transcribe(video_path, language="en")
-
         original_text = result["text"]
 
         st.info("🌍 Metin Türkçe'ye çevriliyor...")
@@ -77,4 +77,3 @@ if video_path and st.button("🎧 Altyazıyı Oluştur"):
 
     except Exception as e:
         st.error(f"🚨 Bir hata oluştu: {e}")
-
