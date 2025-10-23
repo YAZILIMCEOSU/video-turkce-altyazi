@@ -6,12 +6,11 @@ import srt
 import datetime
 from deep_translator import GoogleTranslator
 import yt_dlp
-import imageio_ffmpeg  # ffmpeg için
-import time  # progress bar için
+import imageio_ffmpeg
+import time
 
 # ------------------- ffmpeg ayarı -------------------
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-# PATH değişkenine ekle ki yt-dlp ve whisper bulabilsin
 os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
 st.write(f"✅ ffmpeg binary: {ffmpeg_path}")
 
@@ -44,29 +43,28 @@ elif option == "🌐 YouTube Linki":
 # ------------------- Başlat Butonu -------------------
 if st.button("▶️ Başlat"):
     try:
-        # Progress Bar başlat
-        progress_text = st.empty()
-        progress_bar = st.progress(0)
-
-        # 0-10%: YouTube indirme
-        if yt_link:
-            progress_text.text("📥 YouTube videosu indiriliyor...")
-            video_path = "temp/video.mp4"
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': video_path,
-                'quiet': True,
-                'no_warnings': True,
-                'noplaylist': True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([yt_link])
-            progress_bar.progress(10)
-            st.success("✅ YouTube videosu indirildi.")
-
-        if not video_path:
-            st.error("🚨 Video yüklenmedi veya link boş.")
+        if not video_path and not yt_link:
+            st.error("🚨 Video yüklemediniz ve YouTube linki girmediniz.")
         else:
+            progress_text = st.empty()
+            progress_bar = st.progress(0)
+
+            # 0-10%: YouTube indirme
+            if yt_link:
+                progress_text.text("📥 YouTube videosu indiriliyor...")
+                video_path = "temp/video.mp4"
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'outtmpl': video_path,
+                    'quiet': True,
+                    'no_warnings': True,
+                    'noplaylist': True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([yt_link])
+                progress_bar.progress(10)
+                st.success("✅ YouTube videosu indirildi.")
+
             # 10-50%: Whisper model yükleme
             progress_text.text("🔄 Ses tanıma modeli yükleniyor...")
             model = whisper.load_model("base")
