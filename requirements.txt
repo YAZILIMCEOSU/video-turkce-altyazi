@@ -1,8 +1,9 @@
 streamlit
 pytube
-deep-translator
+openai-whisper
 moviepy
 srt
-openai-whisper
+deep-translator
+googletrans==4.0.0-rc1
 
 
