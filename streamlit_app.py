@@ -6,15 +6,14 @@ import srt
 import datetime
 from deep_translator import GoogleTranslator
 import yt_dlp
-import imageio_ffmpeg  # ffmpeg için
+import imageio_ffmpeg
 import time
 
-# ------------------- ffmpeg ayarı (kesin çözüm) -------------------
-# imageio-ffmpeg paketini kullanarak ffmpeg binary'sini bul
-ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-# binary'nin bulunduğu dizini PATH'e ekle
-os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
-st.write(f"✅ ffmpeg yolu: {ffmpeg_path}")
+# ------------------- ffmpeg kesin çözüm -------------------
+# imageio-ffmpeg ile binary al, kullanıcıya göstermiyoruz
+ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+os.environ["FFMPEG_BINARY"] = ffmpeg_bin
+os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_bin)
 
 # ------------------- Başlık -------------------
 st.title("🎬 Türkçe Altyazı Oluşturucu")
@@ -63,7 +62,8 @@ if st.button("▶️ Başlat"):
                     'noplaylist': True,
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
                     'sleep_interval': 1,
-                    'retries': 10
+                    'retries': 10,
+                    'ffmpeg_location': ffmpeg_bin  # 🔹 burada binary yolu kesin verildi
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([yt_link])
