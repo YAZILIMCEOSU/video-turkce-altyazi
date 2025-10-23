@@ -1,6 +1,6 @@
 streamlit
 whisper
-pytube
+yt-dlp
 srt
 deep-translator
 torch
