@@ -83,4 +83,4 @@ if video_path and st.button("🎧 Altyazıyı Oluştur"):
         st.download_button("⬇️ Altyazıyı indir (.srt)", data=srt_content, file_name="altyazi.srt")
 
     except Exception as e:
-        st.error(f"🚨 Bir hata oluştu:
+        st.error(f"🚨 Bir hata oluştu: {e}")
