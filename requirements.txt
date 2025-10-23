@@ -4,3 +4,4 @@ pytube
 srt
 deep-translator
 torch
+imageio-ffmpeg
