@@ -1,3 +1,10 @@
+import imageio_ffmpeg
+import os
+
+# ffmpeg path'i al
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+os.environ["FFMPEG_BINARY"] = ffmpeg_path
+
 import streamlit as st
 import os
 import tempfile
