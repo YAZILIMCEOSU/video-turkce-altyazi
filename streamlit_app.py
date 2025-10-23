@@ -1,114 +1,109 @@
 import streamlit as st
-import os
 import tempfile
+import os
 import whisper
 import srt
 import datetime
 from deep_translator import GoogleTranslator
 import yt_dlp
 import imageio_ffmpeg
+import subprocess
 import time
 
-# ------------------- ffmpeg kesin çözüm -------------------
-# imageio-ffmpeg ile binary al, kullanıcıya göstermiyoruz
-ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
-os.environ["FFMPEG_BINARY"] = ffmpeg_bin
-os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_bin)
+# 🔹 ffmpeg binary kesin çözüm
+FFMPEG_BIN = imageio_ffmpeg.get_ffmpeg_exe()  # kullanıcıya gösterme
 
-# ------------------- Başlık -------------------
+# Başlık
 st.title("🎬 Türkçe Altyazı Oluşturucu")
-st.write("Videoyu yükle veya YouTube linki gir → Başlat butonuna basarak altyazıyı oluştur.")
+st.write("Video yükle veya YouTube linki gir → Başlat'a bas → Altyazıyı indir")
 
-# ------------------- Temp dizin -------------------
+# Temp klasörü
 if not os.path.exists("temp"):
     os.makedirs("temp")
 
-# ------------------- Video Kaynak Seçimi -------------------
-option = st.radio("Video Kaynağı Seç:", ["📤 Video Yükle (≤200MB)", "🌐 YouTube Linki"])
+# Video kaynağı
+option = st.radio("Video Kaynağı:", ["📤 Video Yükle", "🌐 YouTube Linki"])
 video_path = None
 yt_link = None
 
-# --- Video Yükleme ---
-if option == "📤 Video Yükle (≤200MB)":
-    uploaded_file = st.file_uploader("Bir video yükle (MP4, MOV, AVI, MKV)", type=["mp4", "mov", "avi", "mkv"])
+if option == "📤 Video Yükle":
+    uploaded_file = st.file_uploader("Video seç (MP4, MOV, AVI, MKV)", type=["mp4","mov","avi","mkv"])
     if uploaded_file:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
             tmp_file.write(uploaded_file.read())
             video_path = tmp_file.name
-        st.success("✅ Video başarıyla yüklendi.")
+        st.success("✅ Video yüklendi.")
 
-# --- YouTube Linki ---
 elif option == "🌐 YouTube Linki":
-    yt_link = st.text_input("YouTube video linkini gir:")
+    yt_link = st.text_input("YouTube linki gir:")
 
-# ------------------- Başlat Butonu -------------------
+# Başlat butonu
 if st.button("▶️ Başlat"):
     try:
         if not video_path and not yt_link:
-            st.error("🚨 Video yüklemediniz ve YouTube linki girmediniz.")
+            st.error("🚨 Video yok veya YouTube linki girilmedi.")
         else:
             progress_text = st.empty()
             progress_bar = st.progress(0)
 
-            # 0-10%: YouTube indirme
+            # YouTube indirme
             if yt_link:
-                progress_text.text("📥 YouTube videosu indiriliyor...")
+                progress_text.text("📥 YouTube indiriliyor...")
                 video_path = "temp/video.mp4"
                 ydl_opts = {
                     'format': 'bestaudio/best',
                     'outtmpl': video_path,
                     'quiet': True,
-                    'no_warnings': True,
                     'noplaylist': True,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-                    'sleep_interval': 1,
+                    'user_agent': 'Mozilla/5.0',
                     'retries': 10,
-                    'ffmpeg_location': ffmpeg_bin  # 🔹 burada binary yolu kesin verildi
+                    'sleep_interval': 1,
+                    'ffmpeg_location': FFMPEG_BIN  # ffmpeg yolunu kesin veriyoruz
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([yt_link])
                 progress_bar.progress(10)
-                st.success("✅ YouTube videosu indirildi.")
+                st.success("✅ YouTube indirildi.")
 
-            # 10-50%: Whisper model yükleme
+            # Whisper modeli yükleme
             progress_text.text("🔄 Ses tanıma modeli yükleniyor...")
             model = whisper.load_model("base")
             progress_bar.progress(30)
             time.sleep(0.5)
 
-            # 50-70%: Ses çözümleme
-            progress_text.text("🗣️ Ses çözümleniyor...")
-            result = model.transcribe(video_path, language="en")
+            # Ses çözümleme
+            progress_text.text("🗣️ Ses çözülüyor...")
+            result = model.transcribe(video_path)
             original_text = result["text"]
             progress_bar.progress(60)
             time.sleep(0.5)
 
-            # 70-85%: Türkçe çeviri
-            progress_text.text("🌍 Metin Türkçe'ye çevriliyor...")
+            # Türkçeye çeviri
+            progress_text.text("🌍 Çeviri yapılıyor...")
             translated_text = GoogleTranslator(source="auto", target="tr").translate(original_text)
             progress_bar.progress(80)
             time.sleep(0.5)
 
-            # 85-100%: Altyazı oluşturma
-            progress_text.text("🧩 Altyazı oluşturuluyor...")
+            # Altyazı oluşturma
+            progress_text.text("🧩 Altyazı hazırlanıyor...")
             subs = [
                 srt.Subtitle(
                     index=i,
-                    start=datetime.timedelta(seconds=i * 5),
-                    end=datetime.timedelta(seconds=(i + 1) * 5),
+                    start=datetime.timedelta(seconds=i*5),
+                    end=datetime.timedelta(seconds=(i+1)*5),
                     content=line.strip()
                 )
-                for i, line in enumerate(translated_text.split('.'))
-                if line.strip()
+                for i,line in enumerate(translated_text.split('.')) if line.strip()
             ]
             srt_content = srt.compose(subs)
+
             srt_path = "temp/altyazi.srt"
             with open(srt_path, "w", encoding="utf-8") as f:
                 f.write(srt_content)
             progress_bar.progress(100)
 
-            st.success("✅ Türkçe altyazı başarıyla oluşturuldu!")
-            st.download_button("⬇️ Altyazıyı indir (.srt)", data=srt_content, file_name="altyazi.srt")
+            st.success("✅ Altyazı hazır!")
+            st.download_button("⬇️ Altyazıyı indir", data=srt_content, file_name="altyazi.srt")
 
     except Exception as e:
         st.error(f"🚨 Bir hata oluştu: {e}")
