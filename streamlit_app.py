@@ -1,70 +1,61 @@
 import streamlit as st
 import os
 import tempfile
+import whisper
 import srt
 import datetime
-import whisper
 from pytube import YouTube
 from deep_translator import GoogleTranslator
 
-st.title("🎥 Türkçe Altyazı Çevirici Uygulaması")
+# ------------------- Streamlit Ayarları -------------------
+st.set_option('server.maxUploadSize', 1024)  # 🔹 1 GB'a kadar video yükleme
+st.title("🎬 Türkçe Altyazı Oluşturucu (Otomatik Çeviri)")
+st.write("Videoyu yükle veya YouTube linki gir → otomatik Türkçe altyazı oluşturulsun.")
 
-st.markdown("""
-Bu uygulama, yüklediğiniz veya YouTube bağlantısı verdiğiniz videolardan **Türkçe altyazı** üretir.  
-Desteklenen diller: İngilizce, Almanca, Fransızca ve diğer diller.
-""")
+# ------------------- Geçici dosya dizini -------------------
+if not os.path.exists("temp"):
+    os.makedirs("temp")
 
-# 🔹 Whisper modelini yükle
-@st.cache_resource
-def load_model():
-    return whisper.load_model("small")
-
-model = load_model()
-
-# 🔹 Video seçimi
-option = st.radio("Video türünü seçin:", ["🎥 YouTube Linki", "📁 Bilgisayardan Yükle"])
+# ------------------- Video Kaynak Seçimi -------------------
+option = st.radio("Video Kaynağı Seç:", ["📤 Video Yükle", "🌐 YouTube Linki"])
 
 video_path = None
 
-# --- YouTube Video İndirme ---
-if option == "🎥 YouTube Linki":
-    yt_link = st.text_input("YouTube bağlantısını buraya yapıştırın:")
+if option == "📤 Video Yükle":
+    uploaded_file = st.file_uploader("Bir video yükle (MP4, MOV, AVI...)", type=["mp4", "mov", "avi", "mkv"])
+    if uploaded_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
+            tmp_file.write(uploaded_file.read())
+            video_path = tmp_file.name
+            st.success("✅ Video başarıyla yüklendi.")
+
+elif option == "🌐 YouTube Linki":
+    yt_link = st.text_input("YouTube video linkini gir:")
     if yt_link:
         try:
             yt = YouTube(yt_link)
-            stream = yt.streams.filter(only_audio=True).first()
-            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-            stream.download(filename=tmp_file.name)
-            video_path = tmp_file.name
-            st.success("✅ YouTube videosu indirildi!")
+            ys = yt.streams.filter(only_audio=True).first()
+            video_path = "temp/video.mp4"
+            ys.download(filename=video_path)
+            st.success(f"✅ YouTube videosu indirildi: {yt.title}")
         except Exception as e:
-            st.error(f"❌ Video indirilemedi: {e}")
+            st.error(f"🚨 YouTube indirme hatası: {e}")
 
-# --- Dosya Yükleme ---
-elif option == "📁 Bilgisayardan Yükle":
-    uploaded_file = st.file_uploader("Bir video dosyası yükleyin (MP4, MKV, MOV)", type=["mp4", "mkv", "mov"])
-    if uploaded_file:
-        try:
-            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-            tmp_file.write(uploaded_file.read())
-            video_path = tmp_file.name
-            st.success("✅ Video yüklendi!")
-        except Exception as e:
-            st.error(f"❌ Video yüklenemedi: {e}")
-
-# --- Altyazı Oluşturma ---
-if video_path and st.button("🎧 Altyazıyı oluştur"):
-    st.info("⏳ Ses dönüştürülüyor, lütfen bekleyin...")
+# ------------------- Altyazı İşleme -------------------
+if video_path and st.button("🎧 Altyazıyı Oluştur"):
     try:
-        result = model.transcribe(video_path, task="translate")  # İngilizce'ye çevir
-        english_text = result["text"]
+        st.info("🔄 Ses tanıma modeli yükleniyor...")
+        model = whisper.load_model("base")
 
-        st.success("✅ Altyazı çıkarıldı. Türkçe'ye çevriliyor...")
+        st.info("🗣️ Ses çözümleniyor, lütfen bekleyin...")
+        result = model.transcribe(video_path, language="en")
 
-        # 🔹 Deep Translator ile Türkçe çeviri
-        translated_text = GoogleTranslator(source='auto', target='tr').translate(english_text)
+        original_text = result["text"]
 
-        # 🔹 Altyazı objeleri oluştur
+        st.info("🌍 Metin Türkçe'ye çevriliyor...")
+        translated_text = GoogleTranslator(source="auto", target="tr").translate(original_text)
+
+        st.info("🧩 Altyazı oluşturuluyor...")
         subs = [
             srt.Subtitle(
                 index=i,
@@ -77,15 +68,13 @@ if video_path and st.button("🎧 Altyazıyı oluştur"):
         ]
 
         srt_content = srt.compose(subs)
-
-        # 🔹 SRT dosyasını kaydet
-        srt_path = os.path.splitext(video_path)[0] + "_turkce.srt"
+        srt_path = "temp/altyazi.srt"
         with open(srt_path, "w", encoding="utf-8") as f:
             f.write(srt_content)
 
         st.success("✅ Türkçe altyazı başarıyla oluşturuldu!")
-        st.download_button("⬇️ Altyazı Dosyasını İndir (.srt)", srt_content, file_name="altyazi_tr.srt")
+        st.download_button("⬇️ Altyazıyı indir (.srt)", data=srt_content, file_name="altyazi.srt")
 
     except Exception as e:
-        st.error(f"❌ Hata oluştu: {e}")
+        st.error(f"🚨 Bir hata oluştu: {e}")
 
