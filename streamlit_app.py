@@ -5,23 +5,22 @@ import whisper
 import srt
 import datetime
 from deep_translator import GoogleTranslator
-import yt_dlp  # YouTube için daha kararlı indirme
+import yt_dlp
 import imageio.v3 as iio  # ffmpeg için
 
-# ------------------- Streamlit Başlık -------------------
-st.title("🎬 Türkçe Altyazı Oluşturucu (Otomatik Çeviri)")
+# ------------------- Başlık -------------------
+st.title("🎬 Türkçe Altyazı Oluşturucu")
 st.write("Videoyu yükle veya YouTube linki gir → otomatik Türkçe altyazı oluşturulsun.")
 
-# ------------------- Geçici dizin -------------------
+# ------------------- Temp dizin -------------------
 if not os.path.exists("temp"):
     os.makedirs("temp")
 
 # ------------------- Video Kaynak Seçimi -------------------
 option = st.radio("Video Kaynağı Seç:", ["📤 Video Yükle (≤200MB)", "🌐 YouTube Linki"])
-
 video_path = None
 
-# --- Dosya Yükleme ---
+# --- Video Yükleme ---
 if option == "📤 Video Yükle (≤200MB)":
     uploaded_file = st.file_uploader("Bir video yükle (MP4, MOV, AVI, MKV)", type=["mp4", "mov", "avi", "mkv"])
     if uploaded_file:
@@ -30,7 +29,7 @@ if option == "📤 Video Yükle (≤200MB)":
             video_path = tmp_file.name
             st.success("✅ Video başarıyla yüklendi.")
 
-# --- YouTube Video İndirme (yt-dlp ile) ---
+# --- YouTube Video İndirme ---
 elif option == "🌐 YouTube Linki":
     yt_link = st.text_input("YouTube video linkini gir:")
     if yt_link:
@@ -41,7 +40,7 @@ elif option == "🌐 YouTube Linki":
                 'outtmpl': video_path,
                 'quiet': True,
                 'no_warnings': True,
-                'noplaylist': True,  # playlist değil tek video
+                'noplaylist': True,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([yt_link])
