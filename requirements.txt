@@ -3,4 +3,6 @@ pytube
 deep-translator
 moviepy
 srt
+openai-whisper
+
 
