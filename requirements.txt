@@ -1,9 +1,5 @@
 streamlit
 pytube
 openai-whisper
-moviepy
 srt
 deep-translator
-
-
-
