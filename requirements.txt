@@ -1,5 +1,6 @@
 streamlit
+whisper
 pytube
-openai-whisper
 srt
 deep-translator
+torch
