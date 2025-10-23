@@ -4,14 +4,15 @@ import tempfile
 import whisper
 import srt
 import datetime
-from pytube import YouTube
 from deep_translator import GoogleTranslator
+import yt_dlp  # YouTube için daha kararlı indirme
+import imageio.v3 as iio  # ffmpeg için
 
 # ------------------- Streamlit Başlık -------------------
 st.title("🎬 Türkçe Altyazı Oluşturucu (Otomatik Çeviri)")
 st.write("Videoyu yükle veya YouTube linki gir → otomatik Türkçe altyazı oluşturulsun.")
 
-# ------------------- Geçici dosya dizini -------------------
+# ------------------- Geçici dizin -------------------
 if not os.path.exists("temp"):
     os.makedirs("temp")
 
@@ -20,7 +21,7 @@ option = st.radio("Video Kaynağı Seç:", ["📤 Video Yükle (≤200MB)", "�
 
 video_path = None
 
-# --- Dosya Yükleme (küçük videolar için) ---
+# --- Dosya Yükleme ---
 if option == "📤 Video Yükle (≤200MB)":
     uploaded_file = st.file_uploader("Bir video yükle (MP4, MOV, AVI, MKV)", type=["mp4", "mov", "avi", "mkv"])
     if uploaded_file:
@@ -29,16 +30,22 @@ if option == "📤 Video Yükle (≤200MB)":
             video_path = tmp_file.name
             st.success("✅ Video başarıyla yüklendi.")
 
-# --- YouTube Video İndirme ---
+# --- YouTube Video İndirme (yt-dlp ile) ---
 elif option == "🌐 YouTube Linki":
     yt_link = st.text_input("YouTube video linkini gir:")
     if yt_link:
         try:
-            yt = YouTube(yt_link)
-            ys = yt.streams.filter(only_audio=True).first()
             video_path = "temp/video.mp4"
-            ys.download(filename=video_path)
-            st.success(f"✅ YouTube videosu indirildi: {yt.title}")
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': video_path,
+                'quiet': True,
+                'no_warnings': True,
+                'noplaylist': True,  # playlist değil tek video
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([yt_link])
+            st.success("✅ YouTube videosu indirildi.")
         except Exception as e:
             st.error(f"🚨 YouTube indirme hatası: {e}")
 
@@ -76,4 +83,4 @@ if video_path and st.button("🎧 Altyazıyı Oluştur"):
         st.download_button("⬇️ Altyazıyı indir (.srt)", data=srt_content, file_name="altyazi.srt")
 
     except Exception as e:
-        st.error(f"🚨 Bir hata oluştu: {e}")
+        st.error(f"🚨 Bir hata oluştu:
