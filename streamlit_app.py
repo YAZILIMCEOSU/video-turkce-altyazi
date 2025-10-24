@@ -1,3 +1,9 @@
+import os
+import imageio_ffmpeg
+
+FFMPEG_BIN = imageio_ffmpeg.get_ffmpeg_exe()
+os.environ["PATH"] += os.pathsep + os.path.dirname(FFMPEG_BIN)
+
 import streamlit as st
 import tempfile
 import os
