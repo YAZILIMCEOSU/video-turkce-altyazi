@@ -1,7 +1,6 @@
-streamlit
-whisper
-yt-dlp
-srt
-deep-translator
-torch
-imageio-ffmpeg
+streamlit==1.25.0
+whisper==2025.10.1
+yt-dlp==2025.10.1
+deep-translator==1.12.1
+imageio-ffmpeg==0.4.10
+srt==3.5.0
