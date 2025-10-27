@@ -1,23 +1,19 @@
 import os
-import imageio_ffmpeg
+import tempfile
+import subprocess
+import datetime
+import time
+import srt
 
+import streamlit as st
+import whisper
+import yt_dlp
+from deep_translator import GoogleTranslator
+import imageio_ffmpeg
+# 🔹 ffmpeg yolunu sisteme ekle
 FFMPEG_BIN = imageio_ffmpeg.get_ffmpeg_exe()
 os.environ["PATH"] += os.pathsep + os.path.dirname(FFMPEG_BIN)
 
-import streamlit as st
-import tempfile
-import os
-import whisper
-import srt
-import datetime
-from deep_translator import GoogleTranslator
-import yt_dlp
-import imageio_ffmpeg
-import subprocess
-import time
-
-# 🔹 ffmpeg binary kesin çözüm
-FFMPEG_BIN = imageio_ffmpeg.get_ffmpeg_exe()  # kullanıcıya gösterme
 
 # Başlık
 st.title("🎬 Türkçe Altyazı Oluşturucu")
