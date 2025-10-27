@@ -50,7 +50,7 @@ if st.button("▶️ Başlat"):
 
             # --- YouTube indirme ---
             if yt_link:
-                progress_text.text("📥 YouTube indiriliyor...")
+                progress_text.text("📥 YouTube videosu indiriliyor...")
                 video_path = "temp/video.mp4"
                 ydl_opts = {
                     "format": "bestvideo+bestaudio/best",
@@ -66,11 +66,11 @@ if st.button("▶️ Başlat"):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([yt_link])
                 progress_bar.progress(10)
-                st.success("✅ YouTube indirildi.")
+                st.success("✅ YouTube videosu indirildi.")
 
             # --- Whisper modeli yükleme ---
             progress_text.text("🔄 Ses tanıma modeli yükleniyor...")
-            model = whisper.load_model("base")
+            model = whisper.load_model("base")  # Hızlı ve orta boyut
             progress_bar.progress(30)
             time.sleep(0.5)
 
@@ -82,8 +82,10 @@ if st.button("▶️ Başlat"):
             time.sleep(0.5)
 
             # --- Türkçeye çeviri ---
-            progress_text.text("🌍 Çeviri yapılıyor...")
+            progress_text.text("🌍 Türkçe çeviri yapılıyor...")
             translated_text = GoogleTranslator(source="auto", target="tr").translate(original_text)
+            # Altyazı sonuna çeviri imzası ekle
+            translated_text += " - Goncaloğlu Çeviri"
             progress_bar.progress(80)
             time.sleep(0.5)
 
@@ -91,7 +93,7 @@ if st.button("▶️ Başlat"):
             progress_text.text("🧩 Altyazı hazırlanıyor...")
             subs = [
                 srt.Subtitle(
-                    index=i,
+                    index=i+1,
                     start=datetime.timedelta(seconds=i*5),
                     end=datetime.timedelta(seconds=(i+1)*5),
                     content=line.strip()
@@ -99,11 +101,9 @@ if st.button("▶️ Başlat"):
                 for i, line in enumerate(translated_text.split('.')) if line.strip()
             ]
             srt_content = srt.compose(subs)
-
             srt_path = "temp/altyazi.srt"
             with open(srt_path, "w", encoding="utf-8") as f:
                 f.write(srt_content)
-
             progress_bar.progress(90)
 
             # --- Videoya altyazı gömme ---
@@ -112,7 +112,7 @@ if st.button("▶️ Başlat"):
 
             subprocess.run([
                 FFMPEG_BIN, "-y", "-i", video_path, "-vf",
-                f"subtitles={srt_path}:force_style='Fontsize=20,PrimaryColour=&H00FFFF&'",
+                f"subtitles={srt_path}:force_style='Fontsize=24,PrimaryColour=&H00FFFF&'",
                 "-c:a", "copy", output_path
             ], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
@@ -130,4 +130,3 @@ if st.button("▶️ Başlat"):
 
     except Exception as e:
         st.error(f"🚨 Bir hata oluştu: {e}")
-
